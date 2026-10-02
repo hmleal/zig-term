@@ -1,22 +1,120 @@
 const std = @import("std");
 
-pub const TerminalSize = struct {
+/// The terminal attributes saved before switching terminal modes.
+pub const State = std.posix.termios;
+
+// pub const State = struct {
+//     // opaque platform-specific state
+// };
+
+/// The terminal dimensions measured in character cells.
+pub const Size = struct {
+    /// The number of columns.
     width: u16,
-    heigth: u16,
+    /// The number of rows.
+    height: u16,
 };
 
-pub fn isTerminal(file: std.Io.File) bool {
-    std.debug.print("{any}", .{file});
-
-    return true;
+/// Returns whether `file` refers to an interactive terminal.
+///
+/// The supplied `io` instance is used for platform-specific terminal
+/// detection. Returns `false` when the file is not a terminal.
+pub fn isTerminal(io: std.Io, file: std.Io.File) !bool {
+    return file.isTty(io);
 }
 
-// pub fn makeRaw(file: std.fs.File) !State;
+/// Switches `file` to raw mode and returns its original terminal attributes.
+///
+/// The returned state can be passed to `restore` to return the terminal to its
+/// previous configuration.
+pub fn makeRaw(file: std.Io.File) !State {
+    const original = try std.posix.tcgetattr(file.handle);
 
-// pub fn restore(file: std.fs.File, state: State) !void;
+    var raw = original;
 
-// pub fn getState(file: std.fs.File) !State;
+    // Input flags
+    raw.iflag.IGNBRK = false;
+    raw.iflag.BRKINT = false;
+    raw.iflag.PARMRK = false;
+    raw.iflag.ISTRIP = false;
+    raw.iflag.INLCR = false;
+    raw.iflag.IGNCR = false;
+    raw.iflag.ICRNL = false;
+    raw.iflag.IXON = false;
 
-// pub fn getSize(file: std.fs.File) !Size;
+    // Output flags
+    raw.oflag.OPOST = false;
 
-// pub fn readPassword(allocator: std.mem.Allocator, file: std.fs.File) ![]u8;
+    // Local flags
+    raw.lflag.ECHO = false;
+    raw.lflag.ECHONL = false;
+    raw.lflag.ICANON = false;
+    raw.lflag.ISIG = false;
+    raw.lflag.IEXTEN = false;
+
+    // Control flags
+    raw.cflag.CSIZE = .CS8;
+    raw.cflag.PARENB = false;
+
+    // Read one byte at a time.
+    raw.cc[@intFromEnum(std.posix.V.MIN)] = 1;
+    raw.cc[@intFromEnum(std.posix.V.TIME)] = 0;
+
+    try std.posix.tcsetattr(file.handle, .FLUSH, raw);
+
+    return original;
+}
+
+/// Restores terminal attributes previously returned by `makeRaw`.
+pub fn restore(file: std.Io.File, state: State) !void {
+    try std.posix.tcsetattr(file.handle, .DRAIN, state);
+}
+
+/// Returns the current terminal attributes for `file`.
+pub fn getState(file: std.Io.File) !State {
+    return try std.posix.tcgetattr(file.handle);
+}
+
+/// Returns the terminal dimensions in character cells.
+///
+/// `file` must refer to a terminal device. Returns an error when the
+/// terminal size cannot be determined.
+pub fn getSize(file: std.Io.File) !Size {
+    var size: std.posix.winsize = undefined;
+
+    const result = std.os.linux.ioctl(
+        file.handle,
+        std.os.linux.T.IOCGWINSZ,
+        @intFromPtr(&size),
+    );
+
+    const errno = std.os.linux.errno(result);
+    if (errno != .SUCCESS) {
+        if (errno == .NOTTY) return error.NotATerminal;
+        return std.posix.unexpectedErrno(errno);
+    }
+
+    return .{ .width = size.col, .height = size.row };
+}
+
+// pub fn readPassword(allocator: std.mem.Allocator, file: std.Io.File) ![]u8;
+
+test "isTerminal returns false for a regular file" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const file = try tmp.dir.createFile(std.testing.io, "test", .{});
+    defer file.close(std.testing.io);
+
+    try std.testing.expect(!(try isTerminal(std.testing.io, file)));
+}
+
+test "getSize returns an error for a regular file" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const file = try tmp.dir.createFile(std.testing.io, "test", .{});
+    defer file.close(std.testing.io);
+
+    try std.testing.expectError(error.NotATerminal, getSize(file));
+}

@@ -60,6 +60,24 @@ conventions where appropriate.
 
 The API and implementation are still evolving.
 
+## Support
+
+| Function       | Linux | macOS | BSD | Windows |
+| -------------- | :---: | :---: | :-: | :-----: |
+| `isTerminal`   |   ✅  |   🚧  |  🚧 |    🚧   |
+| `getSize`      |   ✅  |   🚧  |  🚧 |    🚧   |
+| `getState`     |   ✅  |   🚧  |  🚧 |    🚧   |
+| `makeRaw`      |   ✅  |   🚧  |  🚧 |    🚧   |
+| `restore`      |   ✅  |   🚧  |  🚧 |    🚧   |
+| `readPassword` |   🚧  |   🚧  |  🚧 |    🚧   |
+
+### Legend
+
+* ✅ Supported
+* 🚧 Planned / in development
+* ❌ Not supported
+
+
 ## Goals
 
 The project aims to provide a simple terminal abstraction for Zig programs,
