@@ -77,6 +77,19 @@ The API and implementation are still evolving.
 * 🚧 Planned / in development
 * ❌ Not supported
 
+## Examples
+
+More complete programs live in
+[zig-term-demos](https://github.com/hmleal/zig-term-demos).
+
+### Matrix rain
+
+![Matrix rain effect](./demos/matrix.gif)
+
+A full-screen matrix rain effect. It reads the terminal size with `getSize`,
+switches to raw mode with `makeRaw` so keystrokes arrive unbuffered, and
+restores the previous terminal state on exit. Press `q` or `Ctrl-C` to quit —
+no `Enter` needed, because canonical mode is off.
 
 ## Goals
 
