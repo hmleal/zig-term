@@ -64,12 +64,26 @@ The API and implementation are still evolving.
 
 | Function       | Linux | macOS | BSD | Windows |
 | -------------- | :---: | :---: | :-: | :-----: |
-| `isTerminal`   |   ✅  |   🚧  |  🚧 |    🚧   |
-| `getSize`      |   ✅  |   🚧  |  🚧 |    🚧   |
-| `getState`     |   ✅  |   🚧  |  🚧 |    🚧   |
-| `makeRaw`      |   ✅  |   🚧  |  🚧 |    🚧   |
-| `restore`      |   ✅  |   🚧  |  🚧 |    🚧   |
+| `isTerminal`   |   ✅  |   🚧  |  🚧 |    ✅   |
+| `getSize`      |   ✅  |   🚧  |  🚧 |    ✅   |
+| `getState`     |   ✅  |   🚧  |  🚧 |    ✅   |
+| `makeRaw`      |   ✅  |   🚧  |  🚧 |    ✅   |
+| `restore`      |   ✅  |   🚧  |  🚧 |    ✅   |
 | `readPassword` |   🚧  |   🚧  |  🚧 |    🚧   |
+
+### A note on the Windows implementation
+
+The Windows backend talks to the Win32 Console API directly:
+`GetConsoleMode` and `SetConsoleMode` for terminal mode,
+`GetConsoleScreenBufferInfo` for size. It deserves more caution than the POSIX
+side. `termios` is stable, well documented and behaves consistently across
+systems, whereas console mode is a flat bitmask whose details vary between
+console hosts, and there is no direct equivalent of `cfmakeraw` to copy from.
+
+So far it has only been exercised on Windows 11 with the classic conhost, not
+against Windows Terminal or ConPTY. The set of flags cleared by `makeRaw` is a
+judgement call rather than a documented constant. Reports from other hosts are
+welcome.
 
 ### Legend
 
